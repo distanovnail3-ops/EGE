@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WASD Range</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main id="game-shell" aria-label="WASD Range">
+      <canvas id="game"></canvas>
+
+      <div class="hud hud-top">
+        <div class="stat">
+          <span>Убито</span>
+          <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+          <span>Волна</span>
+          <strong id="wave">1</strong>
+        </div>
+        <div class="stat">
+          <span>Зомби</span>
+          <strong id="targets-left">0</strong>
+        </div>
+        <div class="stat">
+          <span>Рекорд</span>
+          <strong id="best-kills">0</strong>
+        </div>
+        <div class="stat">
+          <span>Деньги</span>
+          <strong id="money">0</strong>
+        </div>
+      </div>
+
+      <button id="camera-mode-button" class="camera-toggle" type="button">3-е лицо</button>
+
+      <div class="health-panel" aria-label="Здоровье">
+        <span>Здоровье</span>
+        <div class="health-bar">
+          <i id="health-fill"></i>
+        </div>
+        <strong id="health-value">100</strong>
+      </div>
+
+      <div class="weapon-panel" aria-label="Оружие">
+        <span>Оружие</span>
+        <strong id="weapon-name">Пистолет</strong>
+      </div>
+
+      <section id="shop-panel" class="shop-panel" aria-label="Магазин оружия">
+        <div class="shop-title">Магазин</div>
+        <button type="button" data-weapon="pistol">1 Пистолет</button>
+        <button type="button" data-weapon="bow">2 Лук $140</button>
+        <button type="button" data-weapon="rifle">3 Автомат $360</button>
+        <button type="button" data-weapon="sword">4 Меч $240</button>
+        <button type="button" data-weapon="machinegun">5 Пулемет $760</button>
+      </section>
+
+      <div class="crosshair" aria-hidden="true">
+        <i></i>
+        <i></i>
+      </div>
+
+      <div id="hit-marker" class="hit-marker" aria-hidden="true"></div>
+      <div id="damage-flash" class="damage-flash" aria-hidden="true"></div>
+
+      <section id="start-panel" class="start-panel">
+        <div class="start-copy">
+          <p class="eyebrow">3D стрелялка</p>
+          <h1>WASD Range</h1>
+          <p>Попади по всем мишеням как можно быстрее.</p>
+        </div>
+        <button id="play-button" type="button">Начать</button>
+        <p class="made-by">made by OBANAIL</p>
+      </section>
+    </main>
+
+    <script type="module" src="./src/game.js"></script>
+  </body>
+</html>
