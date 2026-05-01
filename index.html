@@ -2,13 +2,14 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>WASD Range</title>
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
     <main id="game-shell" aria-label="WASD Range">
       <canvas id="game"></canvas>
+      <audio id="soundtrack" src="./assets/soundtrack.mp3" preload="auto" loop></audio>
 
       <div class="hud hud-top">
         <div class="stat">
@@ -32,6 +33,8 @@
           <strong id="money">0</strong>
         </div>
       </div>
+
+      <div id="soundtrack-label" class="soundtrack-label">godlikelove - Die Wut</div>
 
       <button id="camera-mode-button" class="camera-toggle" type="button">3-е лицо</button>
 
@@ -64,6 +67,15 @@
 
       <div id="hit-marker" class="hit-marker" aria-hidden="true"></div>
       <div id="damage-flash" class="damage-flash" aria-hidden="true"></div>
+
+      <div id="mobile-controls" class="mobile-controls">
+        <div id="mobile-look-zone" class="mobile-look-zone"></div>
+        <div id="move-stick" class="move-stick">
+          <i id="move-knob"></i>
+        </div>
+        <button id="mobile-sprint" class="mobile-sprint" type="button" aria-label="Бег">⇧</button>
+        <button id="mobile-fire" class="mobile-fire" type="button" aria-label="Огонь"></button>
+      </div>
 
       <section id="start-panel" class="start-panel">
         <div class="start-copy">

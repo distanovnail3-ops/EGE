@@ -5,6 +5,10 @@
     sans-serif;
   background: #101317;
   color: #f5f7fb;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
 * {
@@ -17,6 +21,8 @@ body {
   height: 100%;
   margin: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 button {
@@ -107,6 +113,33 @@ button {
 
 .camera-toggle:active {
   transform: translateY(1px);
+}
+
+.soundtrack-label {
+  position: fixed;
+  left: 50%;
+  top: 78px;
+  z-index: 5;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(15, 19, 24, 0.68);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 180ms ease;
+}
+
+#game-shell.is-playing .soundtrack-label {
+  opacity: 1;
 }
 
 .health-panel {
@@ -327,10 +360,89 @@ button {
   animation: damage-flash 220ms ease-out;
 }
 
+.mobile-controls {
+  display: none;
+}
+
+.mobile-look-zone {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  touch-action: none;
+}
+
+.move-stick,
+.mobile-fire,
+.mobile-sprint {
+  position: fixed;
+  z-index: 12;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 19, 24, 0.48);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+  touch-action: none;
+  user-select: none;
+}
+
+.move-stick {
+  left: calc(20px + var(--safe-left));
+  bottom: calc(24px + var(--safe-bottom));
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  pointer-events: auto;
+}
+
+.move-stick i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 18px rgba(142, 216, 255, 0.35);
+  transform: translate(-50%, -50%);
+}
+
+.mobile-fire {
+  right: calc(24px + var(--safe-right));
+  bottom: calc(30px + var(--safe-bottom));
+  width: 94px;
+  height: 94px;
+  border-radius: 50%;
+  pointer-events: auto;
+}
+
+.mobile-fire::before {
+  position: absolute;
+  inset: 23px;
+  border: 3px solid #ffd86b;
+  border-radius: 50%;
+  content: "";
+}
+
+.mobile-fire:active,
+.mobile-sprint:active {
+  background: rgba(255, 216, 107, 0.26);
+}
+
+.mobile-sprint {
+  right: calc(126px + var(--safe-right));
+  bottom: calc(40px + var(--safe-bottom));
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  color: #ffffff;
+  pointer-events: auto;
+  font-size: 28px;
+  font-weight: 900;
+}
+
 .start-panel {
   position: fixed;
   inset: 0;
-  z-index: 8;
+  z-index: 30;
   display: grid;
   align-content: center;
   justify-items: center;
@@ -459,6 +571,13 @@ button {
     font-size: 12px;
   }
 
+  .soundtrack-label {
+    top: 108px;
+    max-width: 188px;
+    padding: 6px 9px;
+    font-size: 10px;
+  }
+
   .health-panel {
     left: 10px;
     bottom: 10px;
@@ -483,5 +602,114 @@ button {
     min-height: 30px;
     padding: 0 7px;
     font-size: 10px;
+  }
+}
+
+@media (pointer: coarse), (max-width: 820px) {
+  #game {
+    cursor: default;
+  }
+
+  .mobile-controls {
+    display: block;
+  }
+
+  .hud-top {
+    top: calc(8px + var(--safe-top));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: min(calc(100vw - 16px - var(--safe-left) - var(--safe-right)), 430px);
+    gap: 5px;
+  }
+
+  .stat {
+    min-height: 42px;
+    padding: 6px 6px;
+  }
+
+  .stat span {
+    font-size: 7px;
+  }
+
+  .stat strong {
+    font-size: 16px;
+  }
+
+  .camera-toggle {
+    right: calc(10px + var(--safe-right));
+    top: calc(58px + var(--safe-top));
+    min-width: 80px;
+    min-height: 36px;
+    padding: 0 9px;
+    font-size: 11px;
+  }
+
+  .soundtrack-label {
+    top: calc(58px + var(--safe-top));
+    left: calc(10px + var(--safe-left));
+    max-width: min(190px, calc(100vw - 188px));
+    transform: none;
+  }
+
+  .health-panel {
+    left: calc(10px + var(--safe-left));
+    bottom: calc(156px + var(--safe-bottom));
+    width: 180px;
+    padding: 8px 10px;
+  }
+
+  .weapon-panel {
+    left: calc(10px + var(--safe-left));
+    bottom: calc(218px + var(--safe-bottom));
+    width: 180px;
+    padding: 8px 10px;
+  }
+
+  .shop-panel {
+    right: calc(10px + var(--safe-right));
+    top: calc(104px + var(--safe-top));
+    bottom: auto;
+    width: 148px;
+    gap: 5px;
+    padding: 7px;
+  }
+
+  .shop-panel button {
+    min-height: 29px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+
+  .crosshair {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (pointer: coarse) and (orientation: landscape) {
+  .hud-top {
+    left: calc(8px + var(--safe-left));
+    transform: none;
+    width: min(430px, calc(100vw - 190px));
+  }
+
+  .health-panel {
+    bottom: calc(12px + var(--safe-bottom));
+    left: calc(156px + var(--safe-left));
+  }
+
+  .weapon-panel {
+    bottom: calc(70px + var(--safe-bottom));
+    left: calc(156px + var(--safe-left));
+  }
+
+  .shop-panel {
+    top: calc(8px + var(--safe-top));
+    width: 144px;
+  }
+
+  .soundtrack-label {
+    top: calc(58px + var(--safe-top));
+    left: calc(8px + var(--safe-left));
+    max-width: min(260px, calc(100vw - 190px));
   }
 }
