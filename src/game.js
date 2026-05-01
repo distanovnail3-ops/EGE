@@ -1,6 +1,8 @@
 import * as THREE from "https://unpkg.com/three@0.164.1/build/three.module.js";
 
 const canvas = document.querySelector("#game");
+const gameShell = document.querySelector("#game-shell");
+const soundtrack = document.querySelector("#soundtrack");
 const scoreNode = document.querySelector("#score");
 const waveNode = document.querySelector("#wave");
 const targetsLeftNode = document.querySelector("#targets-left");
@@ -15,6 +17,12 @@ const cameraModeButton = document.querySelector("#camera-mode-button");
 const hitMarker = document.querySelector("#hit-marker");
 const damageFlash = document.querySelector("#damage-flash");
 const shopButtons = Array.from(document.querySelectorAll("[data-weapon]"));
+const mobileControlsNode = document.querySelector("#mobile-controls");
+const mobileLookZone = document.querySelector("#mobile-look-zone");
+const moveStick = document.querySelector("#move-stick");
+const moveKnob = document.querySelector("#move-knob");
+const mobileFireButton = document.querySelector("#mobile-fire");
+const mobileSprintButton = document.querySelector("#mobile-sprint");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9dc8df);
@@ -57,6 +65,19 @@ const input = {
   right: false,
   sprint: false,
   fire: false,
+  moveX: 0,
+  moveY: 0,
+};
+
+const touchControls = {
+  enabled:
+    window.matchMedia("(pointer: coarse)").matches ||
+    window.matchMedia("(max-width: 820px)").matches ||
+    "ontouchstart" in window,
+  joystickPointerId: null,
+  lookPointerId: null,
+  lookX: 0,
+  lookY: 0,
 };
 
 const player = {
@@ -160,6 +181,8 @@ const game = {
   money: 0,
   weaponId: "pistol",
   unlockedWeapons: new Set(["pistol"]),
+  started: false,
+  musicStarted: false,
   over: false,
   targets: [],
   targetMeshes: [],
@@ -295,10 +318,18 @@ spawnWave();
 resize();
 updateHud();
 animate();
+initMobileControls();
 
 playButton.addEventListener("click", () => {
   if (game.over) {
     resetGame();
+  }
+
+  startSoundtrack();
+
+  if (touchControls.enabled) {
+    startTouchGame();
+    return;
   }
 
   canvas.requestPointerLock();
@@ -308,7 +339,7 @@ cameraModeButton.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleCameraMode();
 
-  if (document.pointerLockElement !== canvas) {
+  if (!touchControls.enabled && document.pointerLockElement !== canvas) {
     canvas.requestPointerLock();
   }
 });
@@ -326,6 +357,11 @@ canvas.addEventListener("mousedown", (event) => {
   }
 
   event.preventDefault();
+  startSoundtrack();
+
+  if (touchControls.enabled) {
+    return;
+  }
 
   if (document.pointerLockElement !== canvas) {
     canvas.requestPointerLock();
@@ -344,7 +380,11 @@ window.addEventListener("mouseup", (event) => {
 
 document.addEventListener("pointerlockchange", () => {
   const locked = document.pointerLockElement === canvas;
-  startPanel.classList.toggle("hidden", locked);
+  if (locked) {
+    game.started = true;
+  }
+
+  startPanel.classList.toggle("hidden", locked || (touchControls.enabled && game.started && !game.over));
 
   if (!locked) {
     clearInput();
@@ -393,14 +433,17 @@ window.addEventListener("mousemove", (event) => {
     return;
   }
 
-  const sensitivity = 0.00155;
-  player.yaw -= event.movementX * sensitivity;
-  player.pitch -= event.movementY * sensitivity;
+  applyLookDelta(event.movementX, event.movementY, 0.00155, 0.00065);
+});
+
+function applyLookDelta(dx, dy, sensitivity, swayScale) {
+  player.yaw -= dx * sensitivity;
+  player.pitch -= dy * sensitivity;
   player.pitch = THREE.MathUtils.clamp(player.pitch, -1.22, 1.18);
 
-  lookSway.x = THREE.MathUtils.clamp(lookSway.x + event.movementX * 0.00065, -0.08, 0.08);
-  lookSway.y = THREE.MathUtils.clamp(lookSway.y + event.movementY * 0.00065, -0.08, 0.08);
-});
+  lookSway.x = THREE.MathUtils.clamp(lookSway.x + dx * swayScale, -0.08, 0.08);
+  lookSway.y = THREE.MathUtils.clamp(lookSway.y + dy * swayScale, -0.08, 0.08);
+}
 
 function isControlKey(code) {
   return (
@@ -432,6 +475,188 @@ function clearInput() {
   input.right = false;
   input.sprint = false;
   input.fire = false;
+  input.moveX = 0;
+  input.moveY = 0;
+  resetMoveStick();
+}
+
+function hasGameControl() {
+  return document.pointerLockElement === canvas || (touchControls.enabled && game.started && !game.over);
+}
+
+function startTouchGame() {
+  if (game.over) {
+    return;
+  }
+
+  game.started = true;
+  startSoundtrack();
+  startPanel.classList.add("hidden");
+}
+
+function startSoundtrack() {
+  if (!soundtrack || game.musicStarted) {
+    return;
+  }
+
+  soundtrack.volume = 0.45;
+  const playPromise = soundtrack.play();
+  game.musicStarted = true;
+  gameShell?.classList.add("is-playing");
+
+  if (playPromise) {
+    playPromise.catch(() => {
+      game.musicStarted = false;
+      gameShell?.classList.remove("is-playing");
+    });
+  }
+}
+
+function stopSoundtrack() {
+  if (!soundtrack) {
+    return;
+  }
+
+  soundtrack.pause();
+  soundtrack.currentTime = 0;
+  game.musicStarted = false;
+  gameShell?.classList.remove("is-playing");
+}
+
+function initMobileControls() {
+  if (!mobileControlsNode || !moveStick || !moveKnob || !mobileLookZone || !mobileFireButton || !mobileSprintButton) {
+    return;
+  }
+
+  mobileControlsNode.hidden = !touchControls.enabled;
+
+  moveStick.addEventListener("pointerdown", handleMoveStart);
+  moveStick.addEventListener("pointermove", handleMoveDrag);
+  moveStick.addEventListener("pointerup", handleMoveEnd);
+  moveStick.addEventListener("pointercancel", handleMoveEnd);
+
+  mobileLookZone.addEventListener("pointerdown", handleLookStart);
+  mobileLookZone.addEventListener("pointermove", handleLookDrag);
+  mobileLookZone.addEventListener("pointerup", handleLookEnd);
+  mobileLookZone.addEventListener("pointercancel", handleLookEnd);
+
+  mobileFireButton.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    startTouchGame();
+    input.fire = true;
+    mobileFireButton.setPointerCapture(event.pointerId);
+    useCurrentWeapon();
+  });
+  mobileFireButton.addEventListener("pointerup", stopTouchFire);
+  mobileFireButton.addEventListener("pointercancel", stopTouchFire);
+
+  mobileSprintButton.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    startTouchGame();
+    input.sprint = true;
+    mobileSprintButton.setPointerCapture(event.pointerId);
+  });
+  mobileSprintButton.addEventListener("pointerup", stopTouchSprint);
+  mobileSprintButton.addEventListener("pointercancel", stopTouchSprint);
+}
+
+function handleMoveStart(event) {
+  event.preventDefault();
+  startTouchGame();
+  touchControls.joystickPointerId = event.pointerId;
+  moveStick.setPointerCapture(event.pointerId);
+  updateMoveStick(event);
+}
+
+function handleMoveDrag(event) {
+  if (event.pointerId !== touchControls.joystickPointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  updateMoveStick(event);
+}
+
+function handleMoveEnd(event) {
+  if (event.pointerId !== touchControls.joystickPointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  touchControls.joystickPointerId = null;
+  input.moveX = 0;
+  input.moveY = 0;
+  resetMoveStick();
+}
+
+function updateMoveStick(event) {
+  const rect = moveStick.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const maxDistance = rect.width * 0.34;
+  let dx = event.clientX - centerX;
+  let dy = event.clientY - centerY;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance > maxDistance) {
+    dx = (dx / distance) * maxDistance;
+    dy = (dy / distance) * maxDistance;
+  }
+
+  input.moveX = THREE.MathUtils.clamp(dx / maxDistance, -1, 1);
+  input.moveY = THREE.MathUtils.clamp(-dy / maxDistance, -1, 1);
+  moveKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+}
+
+function resetMoveStick() {
+  if (moveKnob) {
+    moveKnob.style.transform = "translate(-50%, -50%)";
+  }
+}
+
+function handleLookStart(event) {
+  if (!touchControls.enabled || event.target !== mobileLookZone) {
+    return;
+  }
+
+  event.preventDefault();
+  startTouchGame();
+  touchControls.lookPointerId = event.pointerId;
+  touchControls.lookX = event.clientX;
+  touchControls.lookY = event.clientY;
+  mobileLookZone.setPointerCapture(event.pointerId);
+}
+
+function handleLookDrag(event) {
+  if (event.pointerId !== touchControls.lookPointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  const dx = event.clientX - touchControls.lookX;
+  const dy = event.clientY - touchControls.lookY;
+  touchControls.lookX = event.clientX;
+  touchControls.lookY = event.clientY;
+  applyLookDelta(dx, dy, 0.0032, 0.0011);
+}
+
+function handleLookEnd(event) {
+  if (event.pointerId !== touchControls.lookPointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  touchControls.lookPointerId = null;
+}
+
+function stopTouchFire(event) {
+  event.preventDefault();
+  input.fire = false;
+}
+
+function stopTouchSprint(event) {
+  event.preventDefault();
+  input.sprint = false;
 }
 
 function toggleCameraMode() {
@@ -1011,14 +1236,17 @@ function animate() {
 function updatePlayer(delta) {
   moveVector.set(0, 0, 0);
 
-  if (document.pointerLockElement === canvas) {
+  if (hasGameControl()) {
     setFlatForward(worldForward);
     worldRight.crossVectors(worldForward, yAxis).normalize();
 
-    if (input.forward) moveVector.add(worldForward);
-    if (input.backward) moveVector.sub(worldForward);
-    if (input.right) moveVector.add(worldRight);
-    if (input.left) moveVector.sub(worldRight);
+    const keyboardX = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+    const keyboardY = (input.forward ? 1 : 0) - (input.backward ? 1 : 0);
+    const moveX = Math.abs(input.moveX) > 0.04 ? input.moveX : keyboardX;
+    const moveY = Math.abs(input.moveY) > 0.04 ? input.moveY : keyboardY;
+
+    moveVector.addScaledVector(worldForward, moveY);
+    moveVector.addScaledVector(worldRight, moveX);
   }
 
   const targetSpeed = input.sprint ? player.sprintSpeed : player.speed;
@@ -1080,7 +1308,7 @@ function updatePlayerAvatar(headBob) {
   playerAvatar.rotation.y = player.yaw;
 
   const speed = playerVelocity.length();
-  const moving = speed > 0.2 && document.pointerLockElement === canvas;
+  const moving = speed > 0.2 && hasGameControl();
   const stride = clock.elapsedTime * (input.sprint ? 13.5 : 10.5);
   const legSwing = moving ? Math.sin(stride) * 0.36 : 0;
 
@@ -1094,7 +1322,7 @@ function updatePlayerAvatar(headBob) {
 
 function updateWeapon(delta) {
   const speed = playerVelocity.length();
-  const moving = speed > 0.2 && document.pointerLockElement === canvas;
+  const moving = speed > 0.2 && hasGameControl();
   const stride = clock.elapsedTime * (input.sprint ? 13.5 : 10.5);
   const bobX = moving ? Math.sin(stride) * 0.016 : 0;
   const bobY = moving ? Math.abs(Math.cos(stride)) * 0.018 : 0;
@@ -1168,7 +1396,7 @@ function updateTargets(time, delta) {
 
 function updateCombat() {
   const item = currentWeapon();
-  if (input.fire && item.auto && document.pointerLockElement === canvas) {
+  if (input.fire && item.auto && hasGameControl()) {
     useCurrentWeapon();
   }
 }
@@ -1437,6 +1665,8 @@ function damagePlayer(amount) {
 
 function endGame() {
   game.over = true;
+  game.started = false;
+  stopSoundtrack();
   clearInput();
   playerVelocity.set(0, 0, 0);
   playButton.textContent = "Заново";
@@ -1458,6 +1688,7 @@ function resetGame() {
   game.money = 0;
   game.weaponId = "pistol";
   game.unlockedWeapons = new Set(["pistol"]);
+  game.started = false;
   game.over = false;
   playerPosition.set(0, 0, 11);
   playerVelocity.set(0, 0, 0);
